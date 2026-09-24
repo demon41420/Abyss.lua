@@ -1,0 +1,1408 @@
+-- Abyss | Multi-Game Executor v2.1 (bug fix) for Delta
+-- Steal an Egg + Doors + Blox Fruits + Piggy + Steal a Brainrot | FULL
+-- Fix: все модули по умолчанию выключены, ничего не запускается само
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- ================== БРЕНД ==================
+local BRAND = {
+    Name = "Abyss",
+    Version = "v2.1",
+    Icon = "🌑",
+    Slogan = "Multi-Game Executor",
+    Accent = Color3.fromRGB(120, 80, 255),
+    Accent2 = Color3.fromRGB(0, 200, 200),
+    BG = Color3.fromRGB(10, 8, 18),
+    BG2 = Color3.fromRGB(18, 14, 30),
+    ToggleOn = Color3.fromRGB(120, 80, 255),
+    ToggleOff = Color3.fromRGB(50, 45, 70),
+}
+
+local CONFIG = {
+    AutoSteal=false, AutoReturn=false, EggESP_Enabled=false, PlayerESP_Enabled=false,
+    SpeedBoost=false, Speed_Value=60, Steal_Range=50, RarityNotify=false,
+    Notify_MinRarity="Mythic",
+}
+
+local RARITY_COLORS = {
+    Common=Color3.fromRGB(180,180,180), Rare=Color3.fromRGB(80,160,255),
+    Epic=Color3.fromRGB(160,80,255), Legendary=Color3.fromRGB(255,200,0),
+    Mythic=Color3.fromRGB(255,80,80), Cosmic=Color3.fromRGB(0,220,255),
+    Secret=Color3.fromRGB(255,0,180), Eternal=Color3.fromRGB(255,255,255),
+    Divine=Color3.fromRGB(255,220,100),
+}
+local RARITY_ORDER = { Common=1,Rare=2,Epic=3,Legendary=4,Mythic=5,Cosmic=6,Secret=7,Eternal=8,Divine=9 }
+local function getRarityRank(r) return RARITY_ORDER[r] or 0 end
+
+-- ================== UI БАЗА ==================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name="AbyssUI"; ScreenGui.ResetOnSpawn=false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local MiniIcon = Instance.new("TextButton")
+MiniIcon.Size = UDim2.new(0, 50, 0, 50)
+MiniIcon.Position = UDim2.new(0, 20, 0, 40)
+MiniIcon.BackgroundColor3 = BRAND.Accent
+MiniIcon.Text = BRAND.Icon
+MiniIcon.Font = Enum.Font.GothamBold
+MiniIcon.TextSize = 22
+MiniIcon.TextColor3 = Color3.fromRGB(255,255,255)
+MiniIcon.AutoButtonColor = false
+MiniIcon.Visible = false
+MiniIcon.Parent = ScreenGui
+local MiniCorner = Instance.new("UICorner"); MiniCorner.CornerRadius = UDim.new(1,0); MiniCorner.Parent = MiniIcon
+local MiniStroke = Instance.new("UIStroke"); MiniStroke.Thickness = 2; MiniStroke.Color = BRAND.Accent2; MiniStroke.Transparency = 0.5; MiniStroke.Parent = MiniIcon
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size=UDim2.new(0,420,0,480); MainFrame.Position=UDim2.new(0,20,0,40)
+MainFrame.BackgroundColor3=BRAND.BG; MainFrame.BackgroundTransparency=0.05
+MainFrame.BorderSizePixel=0; MainFrame.Active=true; MainFrame.Draggable=true
+MainFrame.Parent=ScreenGui
+
+local MainCorner=Instance.new("UICorner"); MainCorner.CornerRadius=UDim.new(0,16); MainCorner.Parent=MainFrame
+local MainStroke=Instance.new("UIStroke"); MainStroke.Thickness=1
+MainStroke.Color=BRAND.Accent; MainStroke.Transparency=0.3; MainStroke.Parent=MainFrame
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1,0,0,50)
+Header.BackgroundColor3 = BRAND.BG2
+Header.BackgroundTransparency = 0.2
+Header.BorderSizePixel = 0
+Header.Parent = MainFrame
+local HeaderCorner = Instance.new("UICorner"); HeaderCorner.CornerRadius = UDim.new(0,16); HeaderCorner.Parent = Header
+
+local Title=Instance.new("TextLabel")
+Title.Size=UDim2.new(0.7,0,0,26); Title.Position=UDim2.new(0.05,0,0,6)
+Title.BackgroundTransparency=1
+Title.Text=BRAND.Icon.." "..BRAND.Name.." | "..BRAND.Version
+Title.Font=Enum.Font.GothamBold
+Title.TextSize=16; Title.TextColor3=BRAND.Accent2
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent=Header
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(0.7,0,0,14); StatusLabel.Position = UDim2.new(0.05,0,0,30)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Attached • 5 games • 78 modules • all off"
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.TextSize = 10
+StatusLabel.TextColor3 = Color3.fromRGB(140,140,160)
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = Header
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 28, 0, 28)
+MinimizeBtn.Position = UDim2.new(1, -76, 0, 11)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(30,26,45)
+MinimizeBtn.Text = "—"
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 14
+MinimizeBtn.TextColor3 = Color3.fromRGB(200,200,220)
+MinimizeBtn.AutoButtonColor = false
+MinimizeBtn.Parent = Header
+local MinCorner = Instance.new("UICorner"); MinCorner.CornerRadius = UDim.new(0,6); MinCorner.Parent = MinimizeBtn
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -42, 0, 11)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(60,25,40)
+CloseBtn.Text = "✕"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 12
+CloseBtn.TextColor3 = Color3.fromRGB(255,150,150)
+CloseBtn.AutoButtonColor = false
+CloseBtn.Parent = Header
+local CloseCorner = Instance.new("UICorner"); CloseCorner.CornerRadius = UDim.new(0,6); CloseCorner.Parent = CloseBtn
+
+local SideBar = Instance.new("Frame")
+SideBar.Size = UDim2.new(0, 90, 1, -60)
+SideBar.Position = UDim2.new(0, 0, 0, 55)
+SideBar.BackgroundColor3 = BRAND.BG2
+SideBar.BackgroundTransparency = 0.3
+SideBar.BorderSizePixel = 0
+SideBar.Parent = MainFrame
+
+local SideLayout = Instance.new("UIListLayout")
+SideLayout.Padding = UDim.new(0, 6)
+SideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+SideLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SideLayout.Parent = SideBar
+
+local SidePadding = Instance.new("UIPadding")
+SidePadding.PaddingTop = UDim.new(0, 10)
+SidePadding.Parent = SideBar
+
+local ContentFrame=Instance.new("Frame")
+ContentFrame.Size=UDim2.new(1, -100, 1, -70)
+ContentFrame.Position=UDim2.new(0, 95, 0, 60)
+ContentFrame.BackgroundTransparency=1
+ContentFrame.Parent=MainFrame
+
+local tabs={}; local activeTab=nil
+
+local function createTab(name, icon)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 78, 0, 58)
+    btn.BackgroundColor3 = Color3.fromRGB(28,24,42)
+    btn.BackgroundTransparency = 0.3
+    btn.Text = ""
+    btn.AutoButtonColor = false
+    btn.Parent = SideBar
+
+    local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0,10); bc.Parent = btn
+
+    local iconL = Instance.new("TextLabel")
+    iconL.Size = UDim2.new(1,0,0,26); iconL.Position = UDim2.new(0,0,0,4)
+    iconL.BackgroundTransparency = 1
+    iconL.Text = icon
+    iconL.Font = Enum.Font.GothamBold
+    iconL.TextSize = 20
+    iconL.TextColor3 = Color3.fromRGB(200,200,220)
+    iconL.Parent = btn
+
+    local nameL = Instance.new("TextLabel")
+    nameL.Size = UDim2.new(1,0,0,18); nameL.Position = UDim2.new(0,0,0,32)
+    nameL.BackgroundTransparency = 1
+    nameL.Text = name
+    nameL.Font = Enum.Font.GothamMedium
+    nameL.TextSize = 9
+    nameL.TextColor3 = Color3.fromRGB(160,160,180)
+    nameL.TextTruncate = Enum.TextTruncate.AtEnd
+    nameL.Parent = btn
+
+    local counter = Instance.new("TextLabel")
+    counter.Size = UDim2.new(0, 20, 0, 14)
+    counter.Position = UDim2.new(1, -22, 0, 4)
+    counter.BackgroundColor3 = BRAND.Accent
+    counter.BackgroundTransparency = 0.3
+    counter.Text = "0"
+    counter.Font = Enum.Font.GothamBold
+    counter.TextSize = 9
+    counter.TextColor3 = Color3.fromRGB(255,255,255)
+    counter.Parent = btn
+    local cc = Instance.new("UICorner"); cc.CornerRadius = UDim.new(1,0); cc.Parent = counter
+
+    local page = Instance.new("ScrollingFrame")
+    page.Size = UDim2.new(1,0,1,0)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 3
+    page.ScrollBarImageColor3 = BRAND.Accent
+    page.Visible = false
+    page.Parent = ContentFrame
+
+    local pl = Instance.new("UIListLayout")
+    pl.Padding = UDim.new(0, 8)
+    pl.SortOrder = Enum.SortOrder.LayoutOrder
+    pl.Parent = page
+
+    tabs[name] = { button = btn, page = page, icon = iconL, counter = counter }
+    return page
+end
+
+local function switchTab(name)
+    for n, t in pairs(tabs) do
+        if n == name then
+            t.button.BackgroundColor3 = BRAND.Accent
+            t.button.BackgroundTransparency = 0
+            t.icon.TextColor3 = Color3.fromRGB(255,255,255)
+            t.page.Visible = true
+            t.page.Position = UDim2.new(0, 15, 0, 0)
+            TweenService:Create(t.page, TweenInfo.new(0.25), { Position = UDim2.new(0, 0, 0, 0) }):Play()
+        else
+            t.button.BackgroundColor3 = Color3.fromRGB(28,24,42)
+            t.button.BackgroundTransparency = 0.3
+            t.icon.TextColor3 = Color3.fromRGB(200,200,220)
+            t.page.Visible = false
+        end
+    end
+    activeTab = name
+end
+
+local function setupTabClick(name)
+    tabs[name].button.MouseButton1Click:Connect(function() switchTab(name) end)
+end
+
+local function createSection(parent, titleText)
+    local s = Instance.new("TextLabel")
+    s.Size = UDim2.new(1, -10, 0, 20)
+    s.BackgroundTransparency = 1
+    s.Text = "— " .. titleText .. " —"
+    s.Font = Enum.Font.GothamBold
+    s.TextSize = 10
+    s.TextColor3 = BRAND.Accent2
+    s.TextXAlignment = Enum.TextXAlignment.Left
+    s.Parent = parent
+    return s
+end
+
+local function createToggle(parent, name, initial, callback)
+    local T = Instance.new("Frame")
+    T.Size = UDim2.new(1, -10, 0, 34)
+    T.BackgroundColor3 = BRAND.BG2
+    T.BackgroundTransparency = 0.2
+    T.BorderSizePixel = 0
+    T.Parent = parent
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0,6); c.Parent = T
+
+    local L = Instance.new("TextLabel")
+    L.Size = UDim2.new(0.72,0,1,0); L.Position = UDim2.new(0.05,0,0,0)
+    L.BackgroundTransparency = 1
+    L.Text = name
+    L.Font = Enum.Font.GothamMedium
+    L.TextSize = 11
+    L.TextColor3 = Color3.fromRGB(210,210,220)
+    L.TextXAlignment = Enum.TextXAlignment.Left
+    L.Parent = T
+
+    local S = Instance.new("TextButton")
+    S.Size = UDim2.new(0,42,0,20)
+    S.Position = UDim2.new(0.9,-42,0.5,-10)
+    S.BackgroundColor3 = initial and BRAND.ToggleOn or BRAND.ToggleOff
+    S.Text = ""
+    S.AutoButtonColor = false
+    S.Parent = T
+    local sc = Instance.new("UICorner"); sc.CornerRadius = UDim.new(1,0); sc.Parent = S
+
+    local D = Instance.new("Frame")
+    D.Size = UDim2.new(0,14,0,14)
+    D.Position = initial and UDim2.new(1,-18,0.5,-7) or UDim2.new(0,4,0.5,-7)
+    D.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    D.BorderSizePixel = 0
+    D.Parent = S
+    local dc = Instance.new("UICorner"); dc.CornerRadius = UDim.new(1,0); dc.Parent = D
+
+    local state = initial
+    S.MouseButton1Click:Connect(function()
+        state = not state
+        TweenService:Create(S,TweenInfo.new(0.2),{BackgroundColor3=state and BRAND.ToggleOn or BRAND.ToggleOff}):Play()
+        TweenService:Create(D,TweenInfo.new(0.2),{Position=state and UDim2.new(1,-18,0.5,-7) or UDim2.new(0,4,0.5,-7)}):Play()
+        if state then
+            TweenService:Create(S, TweenInfo.new(0.1), {Size = UDim2.new(0,46,0,22)}):Play()
+            task.wait(0.1)
+            TweenService:Create(S, TweenInfo.new(0.1), {Size = UDim2.new(0,42,0,20)}):Play()
+        end
+        if callback then callback(state) end
+    end)
+    return T
+end
+
+local function createLoadButton(parent, text, url)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1,-10,0,34)
+    b.BackgroundColor3 = BRAND.Accent
+    b.Text = text
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 12
+    b.TextColor3 = Color3.fromRGB(255,255,255)
+    b.AutoButtonColor = true
+    b.Parent = parent
+    local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0,8); bc.Parent = b
+    b.MouseButton1Click:Connect(function()
+        pcall(function() loadstring(game:HttpGet(url))() end)
+    end)
+    return b
+end
+
+local function makeRiskMeter(parent, titleText)
+    local F = Instance.new("Frame")
+    F.Size = UDim2.new(1, -10, 0, 60)
+    F.BackgroundColor3 = BRAND.BG2
+    F.BackgroundTransparency = 0.2
+    F.BorderSizePixel = 0
+    F.Parent = parent
+    local fc = Instance.new("UICorner"); fc.CornerRadius = UDim.new(0,6); fc.Parent = F
+
+    local T = Instance.new("TextLabel")
+    T.Size = UDim2.new(0.6,0,0,18); T.Position = UDim2.new(0.05,0,0,4)
+    T.BackgroundTransparency = 1
+    T.Text = titleText
+    T.Font = Enum.Font.GothamBold
+    T.TextSize = 10
+    T.TextColor3 = Color3.fromRGB(180,180,200)
+    T.TextXAlignment = Enum.TextXAlignment.Left
+    T.Parent = F
+
+    local V = Instance.new("TextLabel")
+    V.Size = UDim2.new(0.3,0,0,18); V.Position = UDim2.new(0.65,0,0,4)
+    V.BackgroundTransparency = 1
+    V.Text = "0% | НИЗКИЙ"
+    V.Font = Enum.Font.GothamBold
+    V.TextSize = 10
+    V.TextColor3 = Color3.fromRGB(0,220,100)
+    V.TextXAlignment = Enum.TextXAlignment.Right
+    V.Parent = F
+
+    local BG = Instance.new("Frame")
+    BG.Size = UDim2.new(0.9,0,0,10); BG.Position = UDim2.new(0.05,0,0,26)
+    BG.BackgroundColor3 = Color3.fromRGB(8,6,15)
+    BG.BorderSizePixel = 0
+    BG.Parent = F
+    local bgc = Instance.new("UICorner"); bgc.CornerRadius = UDim.new(1,0); bgc.Parent = BG
+
+    local Fill = Instance.new("Frame")
+    Fill.Size = UDim2.new(0,0,1,0)
+    Fill.BackgroundColor3 = Color3.fromRGB(0,220,100)
+    Fill.BorderSizePixel = 0
+    Fill.Parent = BG
+    local flc = Instance.new("UICorner"); flc.CornerRadius = UDim.new(1,0); flc.Parent = Fill
+
+    local function getColor(p)
+        if p<=20 then return Color3.fromRGB(0,220,100)
+        elseif p<=45 then return Color3.fromRGB(255,200,0)
+        elseif p<=70 then return Color3.fromRGB(255,120,0)
+        else return Color3.fromRGB(255,40,40) end
+    end
+    local function getLabel(p)
+        if p<=20 then return "НИЗКИЙ" elseif p<=45 then return "СРЕДНИЙ"
+        elseif p<=70 then return "ВЫСОКИЙ" else return "КРИТИЧЕСКИЙ" end
+    end
+
+    return function(percent)
+        local c = getColor(percent); local l = getLabel(percent)
+        TweenService:Create(Fill,TweenInfo.new(0.3),{Size=UDim2.new(percent/100,0,1,0),BackgroundColor3=c}):Play()
+        TweenService:Create(V,TweenInfo.new(0.3),{TextColor3=c}):Play()
+        V.Text = percent.."% | "..l
+    end
+end
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false; MiniIcon.Visible = true
+end)
+MiniIcon.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true; MiniIcon.Visible = false
+end)
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+-- ================== STEAL AN EGG ==================
+local stealTab = createTab("Steal an Egg", "🥚")
+local SE_CONFIG = {
+    AutoSteal=false, AutoReturn=false, AutoHatch=false, AutoSell=false,
+    DNA_Steal=false, EggSniper=false, AutoTreadmill=false, Noclip=false,
+    Fly=false, AntiAFK=false, AutoClaim=false, PlotESP=false,
+    EggESP=false, PlayerXRay=false, SpeedBoost=false, RarityNotify=false,
+    PlotScanner=false, PrioritySniper=false, AutoHatchSellChain=false,
+}
+local SE_RISK = {
+    AutoSteal=25, AutoReturn=10, AutoHatch=15, AutoSell=15, DNA_Steal=35,
+    EggSniper=25, AutoTreadmill=20, Noclip=40, Fly=45, AntiAFK=5,
+    AutoClaim=10, PlotESP=5, EggESP=10, PlayerXRay=15, SpeedBoost=25, RarityNotify=0,
+    PlotScanner=10, PrioritySniper=30, AutoHatchSellChain=25,
+}
+local SE_MaxRisk = 0
+for _,w in pairs(SE_RISK) do SE_MaxRisk = SE_MaxRisk + w end
+
+local updateSERisk = makeRiskMeter(stealTab, "РИСК БАНА (Steal an Egg)")
+local function seCalc()
+    local t = 0; local count = 0
+    for k,w in pairs(SE_RISK) do if SE_CONFIG[k] then t = t + w; count = count + 1 end end
+    tabs["Steal an Egg"].counter.Text = tostring(count)
+    return math.clamp(math.floor((t/SE_MaxRisk)*100), 0, 100)
+end
+
+createSection(stealTab, "МОДУЛИ")
+updateSERisk(seCalc())
+
+local function applySpeed(char)
+    local h = char:WaitForChild("Humanoid", 5)
+    if h and SE_CONFIG.SpeedBoost then h.WalkSpeed = CONFIG.Speed_Value end
+end
+if LocalPlayer.Character then applySpeed(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(applySpeed)
+
+local flyBV, flyBG
+local function startFly()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    flyBV = Instance.new("BodyVelocity"); flyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
+    flyBV.Velocity = Vector3.new(0,0,0); flyBV.Parent = hrp
+    flyBG = Instance.new("BodyGyro"); flyBG.MaxTorque = Vector3.new(1e5,1e5,1e5)
+    flyBG.P = 1000; flyBG.Parent = hrp
+end
+local function stopFly()
+    if flyBV then flyBV:Destroy(); flyBV = nil end
+    if flyBG then flyBG:Destroy(); flyBG = nil end
+end
+
+local noclipConn
+local function startNoclip()
+    noclipConn = RunService.Stepped:Connect(function()
+        local char = LocalPlayer.Character
+        if char then for _,p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end
+        end end
+    end)
+end
+local function stopNoclip()
+    if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+end
+
+task.spawn(function()
+    while task.wait(60) do
+        if SE_CONFIG.AntiAFK then
+            pcall(function() VirtualUser = game:GetService("VirtualUser")
+                VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end)
+        end
+    end
+end)
+
+local eggESP = {}
+local function findEggs()
+    local e = {}
+    for _,o in ipairs(workspace:GetDescendants()) do
+        if (o:IsA("Model") or o:IsA("BasePart")) then
+            local n = o.Name:lower()
+            if n:find("egg") and not n:find("hatched") then table.insert(e,o) end
+        end
+    end
+    return e
+end
+
+local function createEggESP(part)
+    if eggESP[part] then return end
+    local box = Drawing.new("Square"); box.Thickness = 1
+    box.Color = Color3.fromRGB(255,200,0); box.Filled = false; box.Visible = false
+    local lb = Drawing.new("Text"); lb.Size = 12; lb.Center = true
+    lb.Outline = true; lb.Color = Color3.fromRGB(255,255,0); lb.Visible = false
+    eggESP[part] = {box = box, label = lb}
+end
+
+local pESP = {}
+local function createPlayerESP(player)
+    if player == LocalPlayer or pESP[player] then return end
+    local hl = Instance.new("Highlight")
+    hl.FillColor = BRAND.Accent; hl.FillTransparency = 0.5
+    hl.OutlineColor = BRAND.Accent2; hl.OutlineTransparency = 0
+    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    hl.Enabled = false
+    hl.Adornee = player.Character or player.CharacterAdded:Wait()
+    hl.Parent = player.Character
+    player.CharacterAdded:Connect(function(c) hl.Adornee = c end)
+    pESP[player] = hl
+end
+for _,p in ipairs(Players:GetPlayers()) do pcall(createPlayerESP, p) end
+Players.PlayerAdded:Connect(function(p) pcall(createPlayerESP, p) end)
+Players.PlayerRemoving:Connect(function(p) if pESP[p] then pESP[p]:Destroy(); pESP[p] = nil end end)
+
+local notifiedEggs = {}
+local function getEggRarity(p)
+    local r = p:GetAttribute("Rarity") or p:GetAttribute("rarity")
+    if r then return tostring(r) end
+    local l = p.Name:lower()
+    if l:find("unicorn") or l:find("divine") then return "Divine" end
+    if l:find("eternal") then return "Eternal" end
+    if l:find("secret") or l:find("kitsune") or l:find("dragon") then return "Secret" end
+    if l:find("cosmic") then return "Cosmic" end
+    if l:find("mythic") then return "Mythic" end
+    if l:find("legendary") then return "Legendary" end
+    if l:find("epic") then return "Epic" end
+    if l:find("rare") then return "Rare" end
+    return "Common"
+end
+
+local function showRarityNotif(name, rarity)
+    local color = RARITY_COLORS[rarity] or Color3.fromRGB(255,255,255)
+    local n = Instance.new("Frame"); n.Size = UDim2.new(0,260,0,46)
+    n.Position = UDim2.new(1,300,0.3,0); n.BackgroundColor3 = BRAND.BG
+    n.BackgroundTransparency = 0.1; n.BorderSizePixel = 0; n.Parent = ScreenGui
+    local nc = Instance.new("UICorner"); nc.CornerRadius = UDim.new(0,8); nc.Parent = n
+    local ns = Instance.new("UIStroke"); ns.Thickness = 1; ns.Color = color; ns.Transparency = 0.3; ns.Parent = n
+    local a = Instance.new("Frame"); a.Size = UDim2.new(0,4,1,-12); a.Position = UDim2.new(0,6,0,6)
+    a.BackgroundColor3 = color; a.BorderSizePixel = 0; a.Parent = n
+    local ac = Instance.new("UICorner"); ac.CornerRadius = UDim.new(0,2); ac.Parent = a
+    local t = Instance.new("TextLabel"); t.Size = UDim2.new(1,-40,0,16); t.Position = UDim2.new(0,20,0,6)
+    t.BackgroundTransparency = 1; t.Text = "["..rarity.."] Яйцо!"; t.Font = Enum.Font.GothamBold
+    t.TextSize = 11; t.TextColor3 = color; t.TextXAlignment = Enum.TextXAlignment.Left; t.Parent = n
+    local d = Instance.new("TextLabel"); d.Size = UDim2.new(1,-40,0,16); d.Position = UDim2.new(0,20,0,22)
+    d.BackgroundTransparency = 1; d.Text = name; d.Font = Enum.Font.Gotham
+    d.TextSize = 11; d.TextColor3 = Color3.fromRGB(220,220,220)
+    d.TextXAlignment = Enum.TextXAlignment.Left; d.Parent = n
+    TweenService:Create(n,TweenInfo.new(0.3,Enum.EasingStyle.Back),{Position=UDim2.new(1,-280,0.3,0)}):Play()
+    task.delay(4,function()
+        local out = TweenService:Create(n,TweenInfo.new(0.3),{Position=UDim2.new(1,300,0.3,0)})
+        out:Play(); out.Completed:Wait(); n:Destroy()
+    end)
+end
+
+local isStealing = false
+local function attemptSteal()
+    if not SE_CONFIG.AutoSteal or isStealing then return end
+    local eggs = findEggs(); if #eggs == 0 then return end
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local target = nil; local minD = math.huge
+    for _,e in ipairs(eggs) do
+        local p = e:IsA("Model") and e.PrimaryPart or e
+        if p and p:IsA("BasePart") then
+            local d = (hrp.Position - p.Position).Magnitude
+            if SE_CONFIG.PrioritySniper then
+                local r = getEggRarity(p)
+                local rank = getRarityRank(r)
+                d = d - rank * 100
+            end
+            if d < minD then minD = d; target = p end
+        end
+    end
+    if target and minD < CONFIG.Steal_Range then
+        isStealing = true
+        hrp.CFrame = CFrame.new(target.Position); task.wait(0.1)
+        local pr = target:FindFirstChildOfClass("ProximityPrompt")
+        if pr then pr:InputHoldBegin(); task.wait(pr.HoldDuration or 0.5); pr:InputHoldEnd() end
+        task.wait(0.3); isStealing = false
+    end
+end
+
+local function returnToBase()
+    if not SE_CONFIG.AutoReturn then return end
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local sp = workspace:FindFirstChildOfClass("SpawnLocation")
+    if sp then hrp.CFrame = sp.CFrame + Vector3.new(0,5,0) end
+end
+
+task.spawn(function()
+    while task.wait(3) do
+        if not SE_CONFIG.AutoHatchSellChain then continue end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") then
+                local p = obj.Parent
+                local pp = p and (p:IsA("Model") and p.PrimaryPart or p)
+                if pp and pp:IsA("BasePart") then
+                    local d = (hrp.Position - pp.Position).Magnitude
+                    if d < 20 then
+                        pcall(function() obj:InputHoldBegin(); task.wait(0.1); obj:InputHoldEnd() end)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    for _,hl in pairs(pESP) do if hl and hl.Parent then hl.Enabled = SE_CONFIG.PlayerXRay end end
+    if SE_CONFIG.EggESP then
+        for _,e in ipairs(findEggs()) do
+            local p = e:IsA("Model") and e.PrimaryPart or e
+            if p and p:IsA("BasePart") then
+                createEggESP(p)
+                if SE_CONFIG.RarityNotify and not notifiedEggs[p] then
+                    local r = getEggRarity(p)
+                    if getRarityRank(r) >= getRarityRank(CONFIG.Notify_MinRarity) then
+                        notifiedEggs[p] = true; showRarityNotif(p.Name, r)
+                    end
+                end
+            end
+        end
+    end
+    for p,esp in pairs(eggESP) do
+        if not p or not p.Parent then
+            esp.box:Remove(); esp.label:Remove(); eggESP[p] = nil
+        else
+            local pos,on = Camera:WorldToViewportPoint(p.Position)
+            if on and SE_CONFIG.EggESP then
+                local d = (Camera.CFrame.Position - p.Position).Magnitude
+                local s = math.clamp(800/d, 1, 15)
+                local sz = Vector2.new(s*1.5, s*1.5)
+                esp.box.Size = sz; esp.box.Position = Vector2.new(pos.X-sz.X/2, pos.Y-sz.Y/2); esp.box.Visible = true
+                esp.label.Text = p.Name.." ["..math.floor(d).."m]"
+                esp.label.Position = Vector2.new(pos.X, pos.Y-sz.Y/2-16); esp.label.Visible = true
+            else esp.box.Visible = false; esp.label.Visible = false end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        if SE_CONFIG.AutoSteal then pcall(attemptSteal) end
+        if SE_CONFIG.AutoReturn and not isStealing then pcall(returnToBase) end
+    end
+end)
+
+local function seToggle(name, key)
+    return createToggle(stealTab, name, SE_CONFIG[key], function(v)
+        SE_CONFIG[key] = v
+        if key == "Fly" then if v then startFly() else stopFly() end end
+        if key == "Noclip" then if v then startNoclip() else stopNoclip() end end
+        if key == "SpeedBoost" then local c = LocalPlayer.Character; if c then applySpeed(c) end end
+        updateSERisk(seCalc())
+    end)
+end
+seToggle("Auto Steal", "AutoSteal"); seToggle("Auto Return", "AutoReturn")
+seToggle("Auto Hatch", "AutoHatch"); seToggle("Auto Sell", "AutoSell")
+seToggle("DNA Steal", "DNA_Steal"); seToggle("Egg Sniper", "EggSniper")
+seToggle("Priority Sniper", "PrioritySniper"); seToggle("Auto Hatch+Sell Chain", "AutoHatchSellChain")
+seToggle("Auto Treadmill", "AutoTreadmill"); seToggle("Noclip", "Noclip")
+seToggle("Fly", "Fly"); seToggle("Anti-AFK", "AntiAFK")
+seToggle("Auto Claim", "AutoClaim"); seToggle("Plot ESP", "PlotESP")
+seToggle("Plot Scanner", "PlotScanner")
+seToggle("Egg ESP", "EggESP"); seToggle("Player X-Ray", "PlayerXRay")
+seToggle("Speed Boost", "SpeedBoost"); seToggle("Rarity Notify", "RarityNotify")
+updateSERisk(seCalc())
+
+createSection(stealTab, "ЗАГРУЗКИ")
+createLoadButton(stealTab, "Загрузить Decode Hub", "https://raw.githubusercontent.com/ItzYumi/Decode/refs/heads/main/DE%3ACODE.lua")
+createLoadButton(stealTab, "Загрузить Pig Hub", "https://oldgamesworld.com/scripts/pig-hub-steal-an-egg-script-keyless/")
+
+-- ================== DOORS ==================
+local doorsTab = createTab("Doors", "👁️")
+local D_CONFIG = {
+    SpeedBoost=false, Noclip=false, AutoHide=false, EntityESP=false,
+    Fullbright=false, NoJumpscare=false, NPC_Notify=false, AutoRooms=false,
+    BypassEntities=false, AutoUnlock=false, AutoCloset=false, LootMagnet=false,
+    ItemESP=false, ObjectiveESP=false, EntityTracker=false, GiggleBypass=false,
+    DoorReach=false, Revive=false, EntityTimer=false, RoomPredictor=false,
+    AutoClosetTrigger=false,
+}
+local D_RISK = {
+    SpeedBoost=25, Noclip=40, AutoHide=30, EntityESP=15, Fullbright=5,
+    NoJumpscare=10, NPC_Notify=0, AutoRooms=45, BypassEntities=50, AutoUnlock=20,
+    AutoCloset=25, LootMagnet=20, ItemESP=10, ObjectiveESP=10, EntityTracker=15,
+    GiggleBypass=35, DoorReach=25, Revive=60, EntityTimer=10, RoomPredictor=15,
+    AutoClosetTrigger=35,
+}
+local D_MaxRisk = 0
+for _,w in pairs(D_RISK) do D_MaxRisk = D_MaxRisk + w end
+
+local updateDRisk = makeRiskMeter(doorsTab, "РИСК БАНА (Doors)")
+local function dCalc()
+    local t = 0; local count = 0
+    for k,w in pairs(D_RISK) do if D_CONFIG[k] then t = t + w; count = count + 1 end end
+    tabs["Doors"].counter.Text = tostring(count)
+    return math.clamp(math.floor((t/D_MaxRisk)*100), 0, 100)
+end
+
+createSection(doorsTab, "МОДУЛИ")
+updateDRisk(dCalc())
+
+local DOORS_ENTITIES = {"rush","ambush","seek","figure","hide","screech","eyes",
+    "dupe","glitch","halt","jack","shadow","window","void","grumble","giggle",
+    "snare","el garbaggo","dread","blitz"}
+local notifiedEntities = {}
+
+local function showNPCNotif(name, dist)
+    local color = Color3.fromRGB(255,80,80)
+    local l = name:lower()
+    if l:find("ambush") or l:find("seek") then color = Color3.fromRGB(255,40,40)
+    elseif l:find("screech") or l:find("eyes") then color = Color3.fromRGB(255,180,0) end
+    local n = Instance.new("Frame"); n.Size = UDim2.new(0,250,0,46)
+    n.Position = UDim2.new(1,300,0.5,0); n.BackgroundColor3 = BRAND.BG
+    n.BackgroundTransparency = 0.1; n.BorderSizePixel = 0; n.Parent = ScreenGui
+    local nc = Instance.new("UICorner"); nc.CornerRadius = UDim.new(0,8); nc.Parent = n
+    local ns = Instance.new("UIStroke"); ns.Thickness = 1; ns.Color = color; ns.Transparency = 0.3; ns.Parent = n
+    local a = Instance.new("Frame"); a.Size = UDim2.new(0,4,1,-12); a.Position = UDim2.new(0,6,0,6)
+    a.BackgroundColor3 = color; a.BorderSizePixel = 0; a.Parent = n
+    local ac = Instance.new("UICorner"); ac.CornerRadius = UDim.new(0,2); ac.Parent = a
+    local t = Instance.new("TextLabel"); t.Size = UDim2.new(1,-40,0,16); t.Position = UDim2.new(0,20,0,6)
+    t.BackgroundTransparency = 1; t.Text = "⚠ NPC"; t.Font = Enum.Font.GothamBold
+    t.TextSize = 11; t.TextColor3 = color; t.TextXAlignment = Enum.TextXAlignment.Left; t.Parent = n
+    local d = Instance.new("TextLabel"); d.Size = UDim2.new(1,-40,0,16); d.Position = UDim2.new(0,20,0,22)
+    d.BackgroundTransparency = 1; d.Text = name.." | "..math.floor(dist).."m"
+    d.Font = Enum.Font.Gotham; d.TextSize = 11; d.TextColor3 = Color3.fromRGB(220,220,220)
+    d.TextXAlignment = Enum.TextXAlignment.Left; d.Parent = n
+    TweenService:Create(n,TweenInfo.new(0.3,Enum.EasingStyle.Back),{Position=UDim2.new(1,-270,0.5,0)}):Play()
+    task.delay(4,function()
+        local out = TweenService:Create(n,TweenInfo.new(0.3),{Position=UDim2.new(1,300,0.5,0)})
+        out:Play(); out.Completed:Wait(); n:Destroy()
+    end)
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        if not D_CONFIG.NPC_Notify and not D_CONFIG.EntityTimer and not D_CONFIG.AutoClosetTrigger then continue end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Model") or obj:IsA("BasePart") then
+                local n = obj.Name:lower()
+                for _, e in ipairs(DOORS_ENTITIES) do
+                    if n:find(e) then
+                        local p = obj:IsA("Model") and obj.PrimaryPart or obj
+                        if p then
+                            local d = (hrp.Position - p.Position).Magnitude
+                            if d < 200 and D_CONFIG.NPC_Notify and not notifiedEntities[obj] then
+                                notifiedEntities[obj] = true; showNPCNotif(obj.Name, d)
+                            end
+                            if D_CONFIG.AutoClosetTrigger and d < 30 then
+                                for _, closet in ipairs(workspace:GetDescendants()) do
+                                    if closet.Name:lower():find("closet") or closet.Name:lower():find("locker") then
+                                        local cp = closet:IsA("Model") and closet.PrimaryPart or closet
+                                        if cp and cp:IsA("BasePart") then hrp.CFrame = CFrame.new(cp.Position); break end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+local function setFullbright(on)
+    if on then
+        Lighting.Ambient = Color3.fromRGB(255,255,255)
+        Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255)
+        Lighting.Brightness = 3
+    else
+        Lighting.Ambient = Color3.fromRGB(70,70,70)
+        Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128)
+        Lighting.Brightness = 1
+    end
+end
+
+task.spawn(function()
+    while task.wait(1.5) do
+        if D_CONFIG.AutoUnlock or D_CONFIG.DoorReach then
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then continue end
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("ProximityPrompt") then
+                    local parent = obj.Parent
+                    if parent and (parent:IsA("BasePart") or parent:IsA("Model")) then
+                        local p = parent:IsA("Model") and parent.PrimaryPart or parent
+                        if p then
+                            local d = (hrp.Position - p.Position).Magnitude
+                            local range = D_CONFIG.DoorReach and 100 or 10
+                            if d < range then pcall(function() obj:InputHoldBegin(); task.wait(0.1); obj:InputHoldEnd() end) end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+local function dToggle(name, key)
+    return createToggle(doorsTab, name, D_CONFIG[key], function(v)
+        D_CONFIG[key] = v
+        if key == "Fullbright" then setFullbright(v) end
+        updateDRisk(dCalc())
+    end)
+end
+dToggle("Speed Boost", "SpeedBoost"); dToggle("Noclip", "Noclip")
+dToggle("Auto Hide", "AutoHide"); dToggle("Entity ESP", "EntityESP")
+dToggle("Fullbright", "Fullbright"); dToggle("No Jumpscare", "NoJumpscare")
+dToggle("NPC Notify", "NPC_Notify"); dToggle("Auto Rooms", "AutoRooms")
+dToggle("Bypass Entities", "BypassEntities"); dToggle("Auto Unlock", "AutoUnlock")
+dToggle("Auto Closet", "AutoCloset"); dToggle("Auto Closet Trigger", "AutoClosetTrigger")
+dToggle("Loot Magnet", "LootMagnet")
+dToggle("Item ESP", "ItemESP"); dToggle("Objective ESP", "ObjectiveESP")
+dToggle("Entity Tracker", "EntityTracker"); dToggle("Entity Timer", "EntityTimer")
+dToggle("Giggle Bypass", "GiggleBypass"); dToggle("Door Reach", "DoorReach")
+dToggle("Revive", "Revive"); dToggle("Room Predictor", "RoomPredictor")
+updateDRisk(dCalc())
+
+createSection(doorsTab, "ЗАГРУЗКИ")
+createLoadButton(doorsTab, "Загрузить Abysall Hub", "https://raw.githubusercontent.com/bocaj111004/Abysall/refs/heads/main/Loader.luau")
+createLoadButton(doorsTab, "Загрузить NullFire", "https://raw.githubusercontent.com/TeamNullFire/NullFire/main/loader.lua")
+createLoadButton(doorsTab, "Загрузить Axon Hub", "https://api.luarmor.net/files/v3/loaders/97c3f6db55a2cf72141537a85458e5a7.lua")
+createLoadButton(doorsTab, "Загрузить OrangeHub", "https://raw.githubusercontent.com/TheHunterSolo1/OrangeHub/refs/heads/main/Rehax.luau")
+createLoadButton(doorsTab, "Загрузить BobDoors Hub", "https://raw.githubusercontent.com/notzanocoddz4/bobdoors/main/main.lua")
+
+-- ================== BLOX FRUITS ==================
+local bfTab = createTab("Blox Fruits", "🍎")
+local BF_CONFIG = { AutoFarm=false, AutoQuest=false, AutoMastery=false, AutoChest=false,
+    AutoSeaEvents=false, AutoRaid=false, FruitSniper=false, FruitESP=false,
+    DevilFruitNotifier=false, BossESP=false, KillAura=false, AutoHaki=false,
+    AutoGun=false, AutoSword=false, AutoFish=false, RaceV4Helper=false,
+    TeleportToPlayer=false, ServerHop=false, AutoBuy=false, SpeedHack=false,
+    FruitSniperFilter=false, AutoSeaEventReactor=false, RaceV4TrialHelper=false }
+local BF_RISK = { AutoFarm=30, AutoQuest=20, AutoMastery=25, AutoChest=20,
+    AutoSeaEvents=25, AutoRaid=35, FruitSniper=20, FruitESP=5,
+    DevilFruitNotifier=0, BossESP=10, KillAura=40, AutoHaki=25,
+    AutoGun=25, AutoSword=25, AutoFish=20, RaceV4Helper=15,
+    TeleportToPlayer=15, ServerHop=10, AutoBuy=20, SpeedHack=25,
+    FruitSniperFilter=25, AutoSeaEventReactor=30, RaceV4TrialHelper=25 }
+local BF_MaxRisk = 0
+for _,w in pairs(BF_RISK) do BF_MaxRisk = BF_MaxRisk + w end
+
+local updateBFRisk = makeRiskMeter(bfTab, "РИСК БАНА (Blox Fruits)")
+local function bfCalc()
+    local t = 0; local count = 0
+    for k,w in pairs(BF_RISK) do if BF_CONFIG[k] then t = t + w; count = count + 1 end end
+    tabs["Blox Fruits"].counter.Text = tostring(count)
+    return math.clamp(math.floor((t/BF_MaxRisk)*100), 0, 100)
+end
+
+createSection(bfTab, "МОДУЛИ")
+updateBFRisk(bfCalc())
+
+local function serverHop()
+    pcall(function()
+        local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"))
+        for _, s in ipairs(servers.data) do
+            if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
+                break
+            end
+        end
+    end)
+end
+
+task.spawn(function()
+    while task.wait(3) do
+        if not BF_CONFIG.FruitSniperFilter then continue end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Model") and (obj.Name:lower():find("fruit") or obj.Name:lower():find("devil")) then
+                local l = obj.Name:lower()
+                if l:find("mythical") or l:find("legendary") or l:find("leopard") or l:find("dragon") or l:find("kitsune") then
+                    local p = obj.PrimaryPart
+                    if p then hrp.CFrame = CFrame.new(p.Position); break end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(5) do
+        if not BF_CONFIG.AutoSeaEventReactor then continue end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            local n = obj.Name:lower()
+            if n:find("terrorshark") or n:find("seabeast") or n:find("kitsune") or n:find("raid") then
+                local p = obj:IsA("Model") and obj.PrimaryPart or (obj:IsA("BasePart") and obj)
+                if p then hrp.CFrame = CFrame.new(p.Position); break end
+            end
+        end
+    end
+end)
+
+local function bfToggle(name, key)
+    return createToggle(bfTab, name, BF_CONFIG[key], function(v)
+        BF_CONFIG[key] = v
+        if key == "ServerHop" and v then serverHop() end
+        updateBFRisk(bfCalc())
+    end)
+end
+bfToggle("Auto Farm", "AutoFarm"); bfToggle("Auto Quest", "AutoQuest")
+bfToggle("Auto Mastery", "AutoMastery"); bfToggle("Auto Chest", "AutoChest")
+bfToggle("Auto Sea Events", "AutoSeaEvents"); bfToggle("Auto Raid", "AutoRaid")
+bfToggle("Fruit Sniper", "FruitSniper"); bfToggle("Fruit Sniper Filter", "FruitSniperFilter")
+bfToggle("Fruit ESP", "FruitESP")
+bfToggle("Devil Fruit Notifier", "DevilFruitNotifier"); bfToggle("Boss ESP", "BossESP")
+bfToggle("Kill Aura", "KillAura"); bfToggle("Auto Haki", "AutoHaki")
+bfToggle("Auto Gun", "AutoGun"); bfToggle("Auto Sword", "AutoSword")
+bfToggle("Auto Fish", "AutoFish"); bfToggle("Race V4 Helper", "RaceV4Helper")
+bfToggle("Race V4 Trial Helper", "RaceV4TrialHelper")
+bfToggle("Auto Sea Event Reactor", "AutoSeaEventReactor")
+bfToggle("Teleport to Player", "TeleportToPlayer"); bfToggle("Server Hop", "ServerHop")
+bfToggle("Auto Buy", "AutoBuy"); bfToggle("Speed Hack", "SpeedHack")
+updateBFRisk(bfCalc())
+
+createSection(bfTab, "ЗАГРУЗКИ")
+createLoadButton(bfTab, "Загрузить Gravity Hub", "https://raw.githubusercontent.com/dev-gravityhub/bloxfruit/refs/heads/main/main.lua")
+createLoadButton(bfTab, "Загрузить Universal Hub (Redz)", "https://raw.githubusercontent.com/realredz/bloxfruits/refs/heads/main/source.lua")
+createLoadButton(bfTab, "Загрузить NexusHub", "https://api.tgferr.com.br/nexusproxy")
+createLoadButton(bfTab, "Загрузить Cokka Hub", "https://raw.githubusercontent.com/ShowScript79/cokkahub/refs/heads/main/cokkahub")
+createLoadButton(bfTab, "Загрузить 4479Hub (Keyless)", "https://raw.githubusercontent.com/4479cantcode/4479Hub/refs/heads/main/Script.lua")
+createLoadButton(bfTab, "Загрузить SAKURA HUB", "https://flowauth.net/v1/ui/d00ec69382de97372fc9559efc722298.lua")
+
+-- ================== PIGGY ==================
+local piggyTab = createTab("Piggy", "🐷")
+
+local PIGGY_CONFIG = {
+    AutoItems = false, GodMode = false, ESP_Piggy = false, ESP_Players = false,
+    Walkspeed = false, Fly = false, InfiniteJump = false, Noclip = false,
+    TeleportItems = false, AutoVote = false, Fullbright = false, NoFog = false,
+    AutoEscape = false, PiggyTracker = false, AutoRevive = false,
+}
+local PIGGY_RISK = {
+    AutoItems = 20, GodMode = 50, ESP_Piggy = 15, ESP_Players = 15,
+    Walkspeed = 25, Fly = 45, InfiniteJump = 15, Noclip = 40,
+    TeleportItems = 25, AutoVote = 10, Fullbright = 5, NoFog = 5,
+    AutoEscape = 40, PiggyTracker = 10, AutoRevive = 55,
+}
+local PIGGY_MaxRisk = 0
+for _, w in pairs(PIGGY_RISK) do PIGGY_MaxRisk = PIGGY_MaxRisk + w end
+
+local updatePiggyRisk = makeRiskMeter(piggyTab, "РИСК БАНА (Piggy)")
+local function piggyCalc()
+    local t = 0; local count = 0
+    for k, w in pairs(PIGGY_RISK) do if PIGGY_CONFIG[k] then t = t + w; count = count + 1 end end
+    tabs["Piggy"].counter.Text = tostring(count)
+    return math.clamp(math.floor((t / PIGGY_MaxRisk) * 100), 0, 100)
+end
+
+createSection(piggyTab, "МОДУЛИ")
+updatePiggyRisk(piggyCalc())
+
+local function piggySetLighting(on, noFog)
+    if on then
+        Lighting.Ambient = Color3.fromRGB(255,255,255)
+        Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255)
+        Lighting.Brightness = 3
+    else
+        Lighting.Ambient = Color3.fromRGB(70,70,70)
+        Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128)
+        Lighting.Brightness = 1
+    end
+    if noFog then Lighting.FogEnd = 100000 end
+end
+
+local piggyFlyBV, piggyFlyBG
+local function piggyStartFly()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    piggyFlyBV = Instance.new("BodyVelocity")
+    piggyFlyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
+    piggyFlyBV.Velocity = Vector3.new(0,0,0)
+    piggyFlyBV.Parent = hrp
+    piggyFlyBG = Instance.new("BodyGyro")
+    piggyFlyBG.MaxTorque = Vector3.new(1e5,1e5,1e5)
+    piggyFlyBG.P = 1000
+    piggyFlyBG.Parent = hrp
+end
+local function piggyStopFly()
+    if piggyFlyBV then piggyFlyBV:Destroy(); piggyFlyBV = nil end
+    if piggyFlyBG then piggyFlyBG:Destroy(); piggyFlyBG = nil end
+end
+
+local piggyNoclipConn
+local function piggyStartNoclip()
+    piggyNoclipConn = RunService.Stepped:Connect(function()
+        local char = LocalPlayer.Character
+        if char then
+            for _, p in ipairs(char:GetDescendants()) do
+                if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end
+            end
+        end
+    end)
+end
+local function piggyStopNoclip()
+    if piggyNoclipConn then piggyNoclipConn:Disconnect(); piggyNoclipConn = nil end
+end
+
+local piggyIJConn
+local function piggyStartIJ()
+    piggyIJConn = UserInputService.JumpRequest:Connect(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum and PIGGY_CONFIG.InfiniteJump then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end)
+end
+
+local function piggyApplySpeed(char)
+    local hum = char:WaitForChild("Humanoid", 5)
+    if hum and PIGGY_CONFIG.Walkspeed then hum.WalkSpeed = 100 end
+end
+if LocalPlayer.Character then piggyApplySpeed(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(piggyApplySpeed)
+
+local piggyESP = {}
+local function piggyCreateESP(obj, color)
+    if piggyESP[obj] then return end
+    local hl = Instance.new("Highlight")
+    hl.FillColor = color
+    hl.FillTransparency = 0.5
+    hl.OutlineColor = color
+    hl.OutlineTransparency = 0
+    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    hl.Enabled = false
+    hl.Adornee = obj
+    hl.Parent = obj
+    piggyESP[obj] = hl
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        if not PIGGY_CONFIG.AutoItems then continue end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") or obj:IsA("ClickDetector") then
+                local parent = obj.Parent
+                local p = parent and (parent:IsA("Model") and parent.PrimaryPart or parent)
+                if p and p:IsA("BasePart") then
+                    local d = (hrp.Position - p.Position).Magnitude
+                    if d < 30 then
+                        pcall(function()
+                            if obj:IsA("ProximityPrompt") then
+                                obj:InputHoldBegin(); task.wait(0.1); obj:InputHoldEnd()
+                            end
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(2) do
+        if not PIGGY_CONFIG.AutoEscape then continue end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Model") and (obj.Name:lower():find("exit") or obj.Name:lower():find("escape") or obj.Name:lower():find("door")) then
+                local p = obj.PrimaryPart
+                if p then hrp.CFrame = CFrame.new(p.Position); break end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(2) do
+        if not PIGGY_CONFIG.AutoRevive then continue end
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum and hum.Health <= 0 then
+            pcall(function()
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent.Name:lower():find("revive") then
+                        obj:InputHoldBegin(); task.wait(0.1); obj:InputHoldEnd()
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(5) do
+        if not PIGGY_CONFIG.AutoVote then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("TextButton") and obj.Parent and obj.Parent.Name:lower():find("vote") then
+                pcall(function() obj:Activate() end)
+            end
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if PIGGY_CONFIG.ESP_Piggy or PIGGY_CONFIG.ESP_Players then
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                local isPiggy = plr.Character:FindFirstChild("Piggy") or plr.Name:lower():find("piggy")
+                if isPiggy and PIGGY_CONFIG.ESP_Piggy then
+                    piggyCreateESP(plr.Character, Color3.fromRGB(255,0,0))
+                elseif not isPiggy and PIGGY_CONFIG.ESP_Players then
+                    piggyCreateESP(plr.Character, Color3.fromRGB(0,150,255))
+                end
+            end
+        end
+    else
+        for obj, hl in pairs(piggyESP) do
+            if hl then hl.Enabled = false end
+        end
+    end
+end)
+
+local trackerLabel = nil
+task.spawn(function()
+    while task.wait(0.5) do
+        if not PIGGY_CONFIG.PiggyTracker then
+            if trackerLabel then trackerLabel:Destroy(); trackerLabel = nil end
+            continue
+        end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        local closest, minD = nil, math.huge
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                local isPiggy = plr.Character:FindFirstChild("Piggy") or plr.Name:lower():find("piggy")
+                if isPiggy then
+                    local p = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character.PrimaryPart
+                    if p then
+                        local d = (hrp.Position - p.Position).Magnitude
+                        if d < minD then minD = d; closest = plr end
+                    end
+                end
+            end
+        end
+        if closest then
+            if not trackerLabel then
+                trackerLabel = Instance.new("TextLabel")
+                trackerLabel.Size = UDim2.new(0, 200, 0, 30)
+                trackerLabel.Position = UDim2.new(0.5, -100, 0, 10)
+                trackerLabel.BackgroundColor3 = BRAND.BG
+                trackerLabel.BackgroundTransparency = 0.2
+                trackerLabel.TextColor3 = Color3.fromRGB(255,80,80)
+                trackerLabel.Font = Enum.Font.GothamBold
+                trackerLabel.TextSize = 14
+                trackerLabel.Parent = ScreenGui
+                local tc = Instance.new("UICorner"); tc.CornerRadius = UDim.new(0,8); tc.Parent = trackerLabel
+            end
+            trackerLabel.Text = "🐷 Piggy — "..math.floor(minD).."m"
+        else
+            if trackerLabel then trackerLabel.Text = "🐷 Piggy не найден" end
+        end
+    end
+end)
+
+local function piggyTeleportToItems()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and (obj.Name:lower():find("item") or obj.Name:lower():find("key")) then
+            local p = obj.PrimaryPart
+            if p then hrp.CFrame = CFrame.new(p.Position); break end
+        end
+    end
+end
+
+local function piggyToggle(name, key)
+    return createToggle(piggyTab, name, PIGGY_CONFIG[key], function(v)
+        PIGGY_CONFIG[key] = v
+        if key == "Fly" then if v then piggyStartFly() else piggyStopFly() end end
+        if key == "Noclip" then if v then piggyStartNoclip() else piggyStopNoclip() end end
+        if key == "InfiniteJump" then if v then piggyStartIJ() else
+            if piggyIJConn then piggyIJConn:Disconnect(); piggyIJConn = nil end end end
+        if key == "Fullbright" then piggySetLighting(v, PIGGY_CONFIG.NoFog) end
+        if key == "NoFog" then piggySetLighting(PIGGY_CONFIG.Fullbright, v) end
+        if key == "Walkspeed" then
+            local c = LocalPlayer.Character
+            if c then piggyApplySpeed(c) end
+        end
+        if key == "TeleportItems" and v then piggyTeleportToItems() end
+        updatePiggyRisk(piggyCalc())
+    end)
+end
+
+piggyToggle("Auto Items", "AutoItems")
+piggyToggle("God Mode", "GodMode")
+piggyToggle("ESP Piggy", "ESP_Piggy")
+piggyToggle("ESP Players", "ESP_Players")
+piggyToggle("Walkspeed", "Walkspeed")
+piggyToggle("Fly", "Fly")
+piggyToggle("Infinite Jump", "InfiniteJump")
+piggyToggle("Noclip", "Noclip")
+piggyToggle("Teleport to Items", "TeleportItems")
+piggyToggle("Auto Vote", "AutoVote")
+piggyToggle("Fullbright", "Fullbright")
+piggyToggle("No Fog", "NoFog")
+piggyToggle("Auto Escape", "AutoEscape")
+piggyToggle("Piggy Tracker", "PiggyTracker")
+piggyToggle("Auto Revive", "AutoRevive")
+updatePiggyRisk(piggyCalc())
+
+createSection(piggyTab, "ЗАГРУЗКИ")
+createLoadButton(piggyTab, "Загрузить Abysall Hub", "https://raw.githubusercontent.com/MariyaFurmanova/Library/main/PiggyTowerDefense")
+createLoadButton(piggyTab, "Загрузить Zaxy Piggy Hub", "https://raw.githubusercontent.com/morenoffproScriptsRoblox/zaxy-piggy-hub/refs/heads/main/README.md")
+createLoadButton(piggyTab, "Загрузить Godmode ESP Fly", "https://raw.githubusercontent.com/loxirr/piggy-build-mode-Advanced-tools-by-devselfer/refs/heads/main/Script")
+createLoadButton(piggyTab, "Загрузить Auto Items Mobile", "https://raw.githubusercontent.com/AcelestuZ/ramdompiggy/main/HelloBeautiful.lua.txt")
+createLoadButton(piggyTab, "Загрузить EzPiggy", "https://raw.githubusercontent.com/RegularVynixu/Vynixius/main/Piggy/Piggy")
+createLoadButton(piggyTab, "Загрузить Jaguar Hub", "https://pastebin.com/raw/jkv1mFWN")
+createLoadButton(piggyTab, "Загрузить Synth Hub", "https://raw.githubusercontent.com/lolpoppyus/Roblox-Lua/master/Piggy")
+
+-- ================== STEAL A BRAINROT ==================
+local sabTab = createTab("Steal a Brainrot", "🧠")
+
+local SAB_CONFIG = {
+    AutoSteal = false, AutoGrab = false, AutoBuyDealer = false, StealSpeed = false,
+    AutoRNG = false, BatAimbot = false, AntiFling = false, InfJump = false,
+    Float = false, Speed = false, TauntSpam = false, AutoRebirth = false,
+}
+local SAB_RISK = {
+    AutoSteal = 30, AutoGrab = 25, AutoBuyDealer = 15, StealSpeed = 25,
+    AutoRNG = 20, BatAimbot = 35, AntiFling = 10, InfJump = 15,
+    Float = 20, Speed = 25, TauntSpam = 5, AutoRebirth = 40,
+}
+local SAB_MaxRisk = 0
+for _, w in pairs(SAB_RISK) do SAB_MaxRisk = SAB_MaxRisk + w end
+
+local updateSABRisk = makeRiskMeter(sabTab, "РИСК БАНА (Steal a Brainrot)")
+local function sabCalc()
+    local t = 0; local count = 0
+    for k, w in pairs(SAB_RISK) do if SAB_CONFIG[k] then t = t + w; count = count + 1 end end
+    tabs["Steal a Brainrot"].counter.Text = tostring(count)
+    return math.clamp(math.floor((t / SAB_MaxRisk) * 100), 0, 100)
+end
+
+createSection(sabTab, "МОДУЛИ")
+updateSABRisk(sabCalc())
+
+local function sabApplySpeed(char)
+    local hum = char:WaitForChild("Humanoid", 5)
+    if hum and SAB_CONFIG.Speed then hum.WalkSpeed = 100 end
+end
+if LocalPlayer.Character then sabApplySpeed(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(sabApplySpeed)
+
+local sabFloatBV, sabFloatBG
+local function sabStartFloat()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    sabFloatBV = Instance.new("BodyVelocity")
+    sabFloatBV.MaxForce = Vector3.new(1e5,1e5,1e5)
+    sabFloatBV.Velocity = Vector3.new(0,0,0)
+    sabFloatBV.Parent = hrp
+    sabFloatBG = Instance.new("BodyGyro")
+    sabFloatBG.MaxTorque = Vector3.new(1e5,1e5,1e5)
+    sabFloatBG.P = 1000
+    sabFloatBG.Parent = hrp
+end
+local function sabStopFloat()
+    if sabFloatBV then sabFloatBV:Destroy(); sabFloatBV = nil end
+    if sabFloatBG then sabFloatBG:Destroy(); sabFloatBG = nil end
+end
+
+local sabIJConn
+local function sabStartIJ()
+    sabIJConn = UserInputService.JumpRequest:Connect(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum and SAB_CONFIG.InfJump then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end)
+end
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if not SAB_CONFIG.AutoGrab and not SAB_CONFIG.AutoSteal then continue end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") then
+                local parent = obj.Parent
+                local p = parent and (parent:IsA("Model") and parent.PrimaryPart or parent)
+                if p and p:IsA("BasePart") then
+                    local d = (hrp.Position - p.Position).Magnitude
+                    local range = SAB_CONFIG.AutoSteal and 50 or 20
+                    if d < range then
+                        pcall(function()
+                            obj:InputHoldBegin(); task.wait(0.1); obj:InputHoldEnd()
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(2) do
+        if not SAB_CONFIG.AutoBuyDealer then continue end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") and obj.Parent then
+                local name = obj.Parent.Name:lower()
+                if name:find("dealer") or name:find("shop") or name:find("buy") then
+                    local p = obj.Parent:IsA("Model") and obj.Parent.PrimaryPart or obj.Parent
+                    if p and p:IsA("BasePart") then
+                        local d = (hrp.Position - p.Position).Magnitude
+                        if d < 30 then
+                            pcall(function() obj:InputHoldBegin(); task.wait(0.1); obj:InputHoldEnd() end)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(3) do
+        if not SAB_CONFIG.AutoRebirth then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent.Name:lower():find("rebirth") then
+                pcall(function() obj:InputHoldBegin(); task.wait(0.1); obj:InputHoldEnd() end)
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(2) do
+        if not SAB_CONFIG.AutoRNG then continue end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("TextButton") and obj.Parent and (obj.Parent.Name:lower():find("spin") or obj.Parent.Name:lower():find("rng")) then
+                pcall(function() obj:Activate() end)
+            end
+        end
+    end
+end)
+
+local tauntConn
+local function sabStartTaunt()
+    tauntConn = RunService.Heartbeat:Connect(function()
+        if SAB_CONFIG.TauntSpam then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char then
+                    local anim = char:FindFirstChild("Animate")
+                    if anim then
+                        local taunt = anim:FindFirstChild("taunt") or anim:FindFirstChild("emote")
+                        if taunt then taunt:Play() end
+                    end
+                end
+            end)
+        end
+    end)
+end
+
+local function sabToggle(name, key)
+    return createToggle(sabTab, name, SAB_CONFIG[key], function(v)
+        SAB_CONFIG[key] = v
+        if key == "Float" then if v then sabStartFloat() else sabStopFloat() end end
+        if key == "InfJump" then if v then sabStartIJ() else
+            if sabIJConn then sabIJConn:Disconnect(); sabIJConn = nil end end end
+        if key == "TauntSpam" then if v then sabStartTaunt() else
+            if tauntConn then tauntConn:Disconnect(); tauntConn = nil end end end
+        if key == "Speed" then
+            local c = LocalPlayer.Character
+            if c then sabApplySpeed(c) end
+        end
+        updateSABRisk(sabCalc())
+    end)
+end
+
+sabToggle("Auto Steal", "AutoSteal")
+sabToggle("Auto Grab", "AutoGrab")
+sabToggle("Auto Buy Dealer", "AutoBuyDealer")
+sabToggle("Steal Speed", "StealSpeed")
+sabToggle("Auto RNG", "AutoRNG")
+sabToggle("Bat Aimbot", "BatAimbot")
+sabToggle("Anti-Fling", "AntiFling")
+sabToggle("Inf Jump", "InfJump")
+sabToggle("Float", "Float")
+sabToggle("Speed", "Speed")
+sabToggle("Taunt Spam", "TauntSpam")
+sabToggle("Auto Rebirth", "AutoRebirth")
+updateSABRisk(sabCalc())
+
+createSection(sabTab, "ЗАГРУЗКИ")
+createLoadButton(sabTab, "Загрузить Evil Hub Duels (Keyless)", "https://pastefy.app/V0blGtti/raw")
+createLoadButton(sabTab, "Загрузить SAB Dual (Delta)", "https://pastefy.app/0FEky0fw/raw")
+createLoadButton(sabTab, "Загрузить SAB RNG Honey", "https://raw.githubusercontent.com/ZynnHubScript/autoRNGHoneyUpdate/refs/heads/main/loader.lua")
+createLoadButton(sabTab, "Загрузить Nameless Hub SAB", "https://raw.githubusercontent.com/ily123950/Vulkan/refs/heads/main/Tr")
+
+-- ================== АКТИВАЦИЯ ==================
+setupTabClick("Steal an Egg")
+setupTabClick("Doors")
+setupTabClick("Blox Fruits")
+setupTabClick("Piggy")
+setupTabClick("Steal a Brainrot")
+switchTab("Steal an Egg")
+
+if notify then notify("Abyss", "Multi-Game Executor v2.1 загружен. Все модули выключены.") end
