@@ -1,6 +1,6 @@
--- Abyss | Multi-Game Executor v3.2 for Delta
+-- Abyss | Multi-Game Executor v3.3 for Delta
 -- Steal an Egg + Doors + Blox Fruits + Piggy + Steal a Brainrot
--- Key System via Gist + HWID | Risk indicators | Doors expanded
+-- Key System via Gist + HWID | Risk indicators | Resize corner
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -114,7 +114,7 @@ KFStroke.Color = Color3.fromRGB(120, 80, 255); KFStroke.Transparency = 0.3; KFSt
 
 local KeyTitle = Instance.new("TextLabel")
 KeyTitle.Size = UDim2.new(1, 0, 0, 40); KeyTitle.Position = UDim2.new(0, 0, 0, 10)
-KeyTitle.BackgroundTransparency = 1; KeyTitle.Text = "🌑 ABYSS | v3.2"
+KeyTitle.BackgroundTransparency = 1; KeyTitle.Text = "🌑 ABYSS | v3.3"
 KeyTitle.Font = Enum.Font.GothamBold; KeyTitle.TextSize = 18
 KeyTitle.TextColor3 = Color3.fromRGB(0, 200, 200); KeyTitle.Parent = KeyFrame
 
@@ -225,7 +225,7 @@ end
 
 -- ================== БРЕНД ==================
 local BRAND = {
-    Name = "Abyss", Version = "v3.2", Icon = "🌑",
+    Name = "Abyss", Version = "v3.3", Icon = "🌑",
     Accent = Color3.fromRGB(120, 80, 255), Accent2 = Color3.fromRGB(0, 200, 200),
     BG = Color3.fromRGB(10, 8, 18), BG2 = Color3.fromRGB(18, 14, 30),
     ToggleOn = Color3.fromRGB(120, 80, 255), ToggleOff = Color3.fromRGB(50, 45, 70),
@@ -280,6 +280,50 @@ Header.Size = UDim2.new(1,0,0,50); Header.BackgroundColor3 = BRAND.BG2
 Header.BackgroundTransparency = 0.2; Header.BorderSizePixel = 0; Header.Parent = MainFrame
 local HeaderCorner = Instance.new("UICorner"); HeaderCorner.CornerRadius = UDim.new(0,16); HeaderCorner.Parent = Header
 
+-- === DRAG-CORNER ДЛЯ RESIZE ===
+local resizeCorner = Instance.new("TextButton")
+resizeCorner.Size = UDim2.new(0, 22, 0, 22)
+resizeCorner.Position = UDim2.new(1, -24, 1, -24)
+resizeCorner.BackgroundColor3 = BRAND.Accent
+resizeCorner.BackgroundTransparency = 0.3
+resizeCorner.Text = "◢"
+resizeCorner.TextColor3 = Color3.fromRGB(255,255,255)
+resizeCorner.Font = Enum.Font.GothamBold
+resizeCorner.TextSize = 14
+resizeCorner.AutoButtonColor = false
+resizeCorner.ZIndex = 10
+resizeCorner.Parent = MainFrame
+local rcCorner = Instance.new("UICorner"); rcCorner.CornerRadius = UDim.new(0, 6); rcCorner.Parent = resizeCorner
+
+local isResizing = false
+local resizeStart = nil
+local resizeSize = nil
+
+resizeCorner.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        isResizing = true
+        resizeStart = input.Position
+        resizeSize = MainFrame.AbsoluteSize
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if not isResizing then return end
+    local delta = input.Position - resizeStart
+    local newX = math.clamp(resizeSize.X + delta.X, 300, 800)
+    local newY = math.clamp(resizeSize.Y + delta.Y, 350, 900)
+    MainFrame.Size = UDim2.new(0, newX, 0, newY)
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        isResizing = false
+    end
+end)
+-- === END DRAG-CORNER ===
+
 local AvatarImg = Instance.new("ImageLabel")
 AvatarImg.Size = UDim2.new(0, 30, 0, 30); AvatarImg.Position = UDim2.new(0, 10, 0.5, -15)
 AvatarImg.BackgroundColor3 = AVATAR_COLOR; AvatarImg.BackgroundTransparency = 0
@@ -296,7 +340,7 @@ Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Parent=Header
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(0.6,0,0,14); StatusLabel.Position = UDim2.new(0.15,0,0,30)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "5 games • risk indicators"
+StatusLabel.Text = "5 games • resize corner"
 StatusLabel.Font = Enum.Font.Gotham; StatusLabel.TextSize = 10
 StatusLabel.TextColor3 = Color3.fromRGB(140,140,160)
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left; StatusLabel.Parent = Header
@@ -1916,4 +1960,4 @@ setupTabClick("Piggy")
 setupTabClick("Steal a Brainrot")
 switchTab("Steal an Egg")
 
-if notify then notify("Abyss", "v3.2 загружен. Doors расширен.") end
+if notify then notify("Abyss", "v3.3 загружен. Drag-corner добавлен.") end
